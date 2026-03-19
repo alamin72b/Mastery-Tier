@@ -3,17 +3,19 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
-import { UsersModule } from '../users/users.module'; // 👈 Import the module here
+import { AuthController } from './auth.controller'; // 1. Import it here
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    UsersModule, // 👈 Add it to the imports array
+    UsersModule,
     PassportModule,
     JwtModule.register({
       secret: process.env.AUTH_SECRET,
       signOptions: { expiresIn: '30d' },
     }),
   ],
+  controllers: [AuthController], // 2. IT MUST BE LISTED HERE!
   providers: [AuthService, JwtStrategy],
   exports: [AuthService],
 })

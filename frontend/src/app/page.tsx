@@ -1,60 +1,56 @@
-import { auth } from "@/lib/auth";
-import { SignIn, SignOut } from "@/components/AuthButtons";
-import Image from "next/image";
+import { auth } from '@/lib/auth';
+import { privateFetch } from '@/lib/api';
+import { SignIn, SignOut } from '@/components/AuthButtons';
 
 export default async function Home() {
-  // Grab the session securely on the server
   const session = await auth();
 
+  // 1. GUARD: If no session, don't even call privateFetch
+  if (!session) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <h1 className="text-2xl font-bold mb-4">Mastery Tiers</h1>
+        <p className="mb-6 text-zinc-600">
+          Track your progress. Please sign in to continue.
+        </p>
+        <SignIn />
+      </div>
+    );
+  }
+
+  // 2. DATA FETCH: This only runs if the user is authenticated
+  let categories = [];
+  try {
+    const response = await privateFetch('/categories');
+    categories = response.data;
+  } catch (error) {
+    console.error('Fetch error:', error);
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-md flex-col items-center gap-8 rounded-xl bg-white p-8 shadow-sm dark:bg-zinc-950 dark:border dark:border-zinc-800">
-        
-        <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Mastery Tiers
-          </h1>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            {session ? "Welcome back!" : "Please sign in to view your categories."}
-          </p>
-        </div>
+    <div className="p-8">
+      <div className="flex justify-between items-center mb-10">
+        <h1 className="text-2xl font-bold">Welcome, {session.user?.name}</h1>
+        <SignOut />
+      </div>
 
-        {/* Display this table/layout if the user IS logged in */}
-        {session?.user ? (
-          <div className="flex flex-col items-center gap-4 w-full">
-            {session.user.image && (
-              <Image
-                src={session.user.image}
-                alt="Profile"
-                width={64}
-                height={64}
-                className="rounded-full border border-zinc-200 dark:border-zinc-800"
-              />
-            )}
-            
-            <div className="w-full rounded-lg border border-zinc-200 text-sm dark:border-zinc-800">
-              <div className="grid grid-cols-3 border-b border-zinc-200 p-3 dark:border-zinc-800">
-                <span className="font-medium text-zinc-500">Name</span>
-                <span className="col-span-2 text-zinc-900 dark:text-zinc-100">{session.user.name}</span>
-              </div>
-              <div className="grid grid-cols-3 p-3">
-                <span className="font-medium text-zinc-500">Email</span>
-                <span className="col-span-2 text-zinc-900 dark:text-zinc-100">{session.user.email}</span>
+      <div className="grid gap-4 max-w-2xl">
+        {categories.length > 0 ? (
+          categories.map((cat: any) => (
+            <div
+              key={cat.id}
+              className="p-4 border rounded-xl bg-white shadow-sm dark:bg-zinc-900 dark:border-zinc-800"
+            >
+              <h2 className="font-bold text-lg">{cat.name}</h2>
+              <div className="mt-2 text-sm text-zinc-500">
+                Mastery Tier: {cat.masteryTier}
               </div>
             </div>
-
-            <div className="mt-4 w-full">
-              <SignOut />
-            </div>
-          </div>
+          ))
         ) : (
-          /* Display this if the user IS NOT logged in */
-          <div className="w-full flex justify-center mt-4">
-            <SignIn />
-          </div>
+          <p className="text-zinc-500 italic">No categories created yet.</p>
         )}
-
-      </main>
+      </div>
     </div>
   );
 }
