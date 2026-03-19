@@ -10,9 +10,15 @@ export class CategoriesService {
   // Inject the clean, global database connection
   constructor(private readonly prisma: PrismaService) {}
 
-  async getAllCategories() {
+  /**
+   * Retrieves all categories belonging to a specific user
+   * and calculates the masteryTier dynamically.
+   */
+  async getAllCategories(userId: string) {
     try {
       const categories = await this.prisma.category.findMany({
+        // Filter by the logged-in user's ID
+        where: { userId },
         include: { children: true },
       });
 
@@ -25,17 +31,24 @@ export class CategoriesService {
         return { ...category, masteryTier };
       });
     } catch (error) {
+      console.error('Error fetching categories:', error);
       throw new InternalServerErrorException('Failed to retrieve categories');
     }
   }
 
-  async createCategory(name: string) {
+  /**
+   * Creates a new category linked to a specific user.
+   */
+  async createCategory(name: string, userId: string) {
     try {
       return await this.prisma.category.create({
-        data: { name },
+        data: {
+          name,
+          userId, // Links the category to the User model in Neon
+        },
       });
     } catch (error) {
-      console.error(error); // This will print the REAL error to your terminal
+      console.error('Error creating category:', error);
       throw new InternalServerErrorException('Failed to create category');
     }
   }

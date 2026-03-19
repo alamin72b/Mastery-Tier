@@ -6,38 +6,44 @@ import {
   Param,
   Patch,
   ParseIntPipe,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { Request } from 'express'; // 1. Import Request from express
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
+
+// 2. Define exactly what your JWT Strategy attaches to the request
+interface RequestWithUser extends Request {
+  user: {
+    userId: string;
+    email: string;
+  };
+}
+
 @Controller('categories')
+@UseGuards(AuthGuard('jwt'))
 export class CategoriesController {
-  // We inject the service (the brain) into the controller (the door)
   constructor(private readonly categoriesService: CategoriesService) {}
 
-  // GET http://localhost:3000/categories
   @Get()
-  async getAll() {
-    return this.categoriesService.getAllCategories();
+  // 3. Replace 'any' with 'RequestWithUser'
+  async getAll(@Req() req: RequestWithUser) {
+    return this.categoriesService.getAllCategories(req.user.userId);
   }
 
-  // POST http://localhost:3000/categories
   @Post()
-  async create(@Body() createCategoryDto: CreateCategoryDto) {
-    return this.categoriesService.createCategory(createCategoryDto.name);
-  }
-
-  // POST http://localhost:3000/categories/:id/sub
-  @Post(':id/sub')
-  async createSub(
-    @Param('id', ParseIntPipe) id: number,
-    @Body('name') name: string,
+  // 4. Replace 'any' with 'RequestWithUser'
+  async create(
+    @Body() createCategoryDto: CreateCategoryDto,
+    @Req() req: RequestWithUser,
   ) {
-    return this.categoriesService.createSubCategory(name, id);
+    return this.categoriesService.createCategory(
+      createCategoryDto.name,
+      req.user.userId,
+    );
   }
 
-  // PATCH http://localhost:3000/categories/sub/:id/increment
-  @Patch('sub/:id/increment')
-  async increment(@Param('id', ParseIntPipe) id: number) {
-    return this.categoriesService.incrementSubCategory(id);
-  }
+  // ... rest of your controller
 }
