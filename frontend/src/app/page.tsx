@@ -1,56 +1,66 @@
 import { auth } from '@/lib/auth';
 import { privateFetch } from '@/lib/api';
 import { SignIn, SignOut } from '@/components/AuthButtons';
+import Dashboard from '@/components/Dashboard';
 
 export default async function Home() {
   const session = await auth();
 
-  // 1. GUARD: If no session, don't even call privateFetch
-  if (!session) {
+  if (!session || !session.backendToken) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-2xl font-bold mb-4">Mastery Tiers</h1>
-        <p className="mb-6 text-zinc-600">
-          Track your progress. Please sign in to continue.
-        </p>
-        <SignIn />
-      </div>
+      <main className="min-h-screen bg-zinc-50 px-4 py-10">
+        <div className="mx-auto flex min-h-[80vh] max-w-3xl items-center justify-center">
+          <div className="w-full rounded-[28px] border border-zinc-200 bg-white p-8 text-center shadow-sm">
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
+              Mastery Tiers
+            </h1>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-zinc-500">
+              {session
+                ? 'Your login was interrupted. Please sign out and try again.'
+                : 'Sign in to track your study progress.'}
+            </p>
+            <div className="mt-8 flex justify-center">
+              {session ? <SignOut /> : <SignIn />}
+            </div>
+          </div>
+        </div>
+      </main>
     );
   }
 
-  // 2. DATA FETCH: This only runs if the user is authenticated
   let categories = [];
   try {
     const response = await privateFetch('/categories');
-    categories = response.data;
+    categories = response.data || [];
   } catch (error) {
     console.error('Fetch error:', error);
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-10">
-        <h1 className="text-2xl font-bold">Welcome, {session.user?.name}</h1>
-        <SignOut />
-      </div>
-
-      <div className="grid gap-4 max-w-2xl">
-        {categories.length > 0 ? (
-          categories.map((cat: any) => (
-            <div
-              key={cat.id}
-              className="p-4 border rounded-xl bg-white shadow-sm dark:bg-zinc-900 dark:border-zinc-800"
-            >
-              <h2 className="font-bold text-lg">{cat.name}</h2>
-              <div className="mt-2 text-sm text-zinc-500">
-                Mastery Tier: {cat.masteryTier}
-              </div>
+    <main className="min-h-screen bg-zinc-50 px-4 py-8">
+      <div className="mx-auto max-w-4xl">
+        <header className="mb-6 rounded-[28px] border border-zinc-200 bg-white px-6 py-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-400">
+                Study Dashboard
+              </p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
+                Welcome, {session.user?.name}
+              </h1>
+              <p className="mt-1 text-sm text-zinc-500">
+                Track your exam preparation clearly and consistently
+              </p>
             </div>
-          ))
-        ) : (
-          <p className="text-zinc-500 italic">No categories created yet.</p>
-        )}
+
+            <div className="shrink-0">
+              <SignOut />
+            </div>
+          </div>
+        </header>
+
+        <Dashboard categories={categories} />
       </div>
-    </div>
+    </main>
   );
 }

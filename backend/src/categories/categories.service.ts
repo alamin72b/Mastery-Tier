@@ -71,7 +71,17 @@ export class CategoriesService {
       throw new InternalServerErrorException('Failed to create sub-category');
     }
   }
-
+  async deleteSubCategory(subCategoryId: number) {
+    try {
+      // Prisma's delete method will automatically throw an error if the ID doesn't exist
+      return await this.prisma.subCategory.delete({
+        where: { id: subCategoryId },
+      });
+    } catch (error) {
+      console.error('Error deleting sub-category:', error);
+      throw new InternalServerErrorException('Failed to delete sub-category');
+    }
+  }
   async incrementSubCategory(subCategoryId: number) {
     try {
       const subCategory = await this.prisma.subCategory.findUnique({
@@ -93,6 +103,43 @@ export class CategoriesService {
       throw new InternalServerErrorException(
         'Failed to increment sub-category',
       );
+    }
+  }
+
+  async decrementSubCategory(subCategoryId: number) {
+    try {
+      const subCategory = await this.prisma.subCategory.findUnique({
+        where: { id: subCategoryId },
+      });
+
+      if (!subCategory) throw new NotFoundException('Sub-category not found');
+      // Don't let the count go below 0
+      if (subCategory.count <= 0) return subCategory;
+
+      return await this.prisma.subCategory.update({
+        where: { id: subCategoryId },
+        data: { count: { decrement: 1 } },
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Failed to decrement');
+    }
+  }
+
+  async deleteCategory(categoryId: number) {
+    try {
+      // 1. Delete all child sub-categories first to avoid foreign key errors
+      await this.prisma.subCategory.deleteMany({
+        where: { categoryId },
+      });
+
+      // 2. Delete the main category
+      return await this.prisma.category.delete({
+        where: { id: categoryId },
+      });
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      throw new InternalServerErrorException('Failed to delete category');
     }
   }
 }

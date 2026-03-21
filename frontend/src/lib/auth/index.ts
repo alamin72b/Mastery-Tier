@@ -17,19 +17,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           // 1. Ensure the port is 3001
           // 2. Ensure the path is /auth/google/sync
           // Replace 127.0.0.1 with your exact LAN IP
-          const res = await fetch(
-            'http://192.168.100.195:3001/auth/google/sync',
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                email: user.email,
-                name: user.name,
-                avatar: user.image,
-                googleId: user.id,
-              }),
-            },
-          );
+          const res = await fetch('http://127.0.0.1:3001/auth/google/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: user.email,
+              name: user.name,
+              avatar: user.image,
+              googleId: user.id,
+            }),
+          });
 
           if (!res.ok) {
             console.error('Backend Error:', await res.text());

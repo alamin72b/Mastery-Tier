@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 
-const BASE_URL = 'http://localhost:3001';
+// 🛠️ CHANGED: Explicitly use 127.0.0.1 instead of localhost
+const BASE_URL = 'http://127.0.0.1:3001';
 
 export async function privateFetch(
   endpoint: string,
@@ -27,7 +28,6 @@ export async function privateFetch(
 
   // 3. Handle 401 Unauthorized (Token expired)
   if (response.status === 401) {
-    // You could trigger a redirect to login here in a real app
     throw new Error('Session expired. Please sign in again.');
   }
 
