@@ -1,7 +1,6 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 
-// This is your modular, centralized auth configuration
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Google({
@@ -9,29 +8,53 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientSecret: process.env.AUTH_GOOGLE_SECRET,
     }),
   ],
-  session: {
-    strategy: 'jwt',
-  },
+  session: { strategy: 'jwt' },
   callbacks: {
-    // 1. The JWT Callback: Runs immediately after login
-    // Takes data from Google (user) and puts it in the cookie (token)
+    // 1. The JWT Callback
     async jwt({ token, user, account }) {
       if (account && user) {
-        token.sub = user.id; // Attach the unique Google ID
-        token.name = user.name; // Attach the user's name
-        token.picture = user.image; // Attach the profile picture URL
+        try {
+          // 1. Ensure the port is 3001
+          // 2. Ensure the path is /auth/google/sync
+          // Replace 127.0.0.1 with your exact LAN IP
+          const res = await fetch('http://127.0.0.1:3001/auth/google/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: user.email,
+              name: user.name,
+              avatar: user.image,
+              googleId: user.id,
+            }),
+          });
+
+          if (!res.ok) {
+            console.error('Backend Error:', await res.text());
+            return token;
+          }
+
+          const responseData = await res.json();
+          // Ensure you are accessing the token through your TransformInterceptor 'data' wrapper
+          token.backendToken = responseData.data.accessToken;
+        } catch (error) {
+          console.error(
+            'CRITICAL: Could not connect to NestJS on port 3001',
+            error,
+          );
+        }
       }
       return token;
     },
 
-    // 2. The Session Callback: Runs whenever your app checks if someone is logged in
-    // Takes data from the cookie (token) and exposes it to your frontend (session)
+    // 2. The Session Callback
     async session({ session, token }) {
       if (session.user && token.sub) {
-        session.user.id = token.sub; // Make ID available to the client
-        session.user.name = token.name; // Make name available to the client
-        // Cast token.picture to string | null to satisfy TypeScript
+        session.user.id = token.sub;
+        session.user.name = token.name;
         session.user.image = token.picture as string | null;
+
+        // Expose the NestJS token to the frontend client securely
+        session.backendToken = token.backendToken;
       }
       return session;
     },
