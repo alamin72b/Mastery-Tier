@@ -9,7 +9,24 @@ import {
   deleteCategoryAction,
 } from '@/app/actions';
 
-export default function Dashboard({ categories = [] }: { categories: any[] }) {
+type SubCategory = {
+  id: number;
+  name: string;
+  count: number;
+};
+
+type Category = {
+  id: number;
+  name: string;
+  masteryTier: number;
+  children?: SubCategory[];
+};
+
+export default function Dashboard({
+  categories = [],
+}: {
+  categories: Category[];
+}) {
   return (
     <div className="space-y-6">
       <form
@@ -87,7 +104,7 @@ export default function Dashboard({ categories = [] }: { categories: any[] }) {
             </div>
 
             <div className="mt-4 space-y-2">
-              {category.children?.map((sub: any) => (
+              {category.children?.map((sub) => (
                 <div
                   key={sub.id}
                   className="group/sub flex items-center justify-between gap-3 rounded-xl border border-zinc-100 bg-zinc-50/50 px-3 py-2.5 transition hover:border-zinc-200 hover:bg-white"

@@ -143,8 +143,32 @@ export default async function Home({
         : Promise.resolve([] as DiscoverUser[]),
     ])) as [Category[], Friend[], RequestsResponse, DiscoverUser[]];
 
-    categories = categoriesResponse;
-    friends = friendsResponse;
+    if (Array.isArray(categoriesResponse)) {
+      categories = categoriesResponse;
+    } else if (
+      categoriesResponse &&
+      typeof categoriesResponse === 'object' &&
+      'data' in categoriesResponse &&
+      Array.isArray((categoriesResponse as { data: unknown }).data)
+    ) {
+      categories = (categoriesResponse as { data: Category[] }).data;
+    } else {
+      categories = [];
+    }
+
+    if (Array.isArray(friendsResponse)) {
+      friends = friendsResponse;
+    } else if (
+      friendsResponse &&
+      typeof friendsResponse === 'object' &&
+      'data' in friendsResponse &&
+      Array.isArray((friendsResponse as { data: unknown }).data)
+    ) {
+      friends = (friendsResponse as { data: Friend[] }).data;
+    } else {
+      friends = [];
+    }
+
     incomingRequests = requestsResponse.incoming || [];
     outgoingRequests = requestsResponse.outgoing || [];
     discoverResults = discoverResponse;

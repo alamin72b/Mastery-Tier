@@ -53,5 +53,10 @@ export async function privateFetch(
     throw new Error(message);
   }
 
+  // Unwrap API fencing { success, statusCode, message, data, ... }
+  if (data && typeof data === 'object' && 'data' in data) {
+    return (data as { data: unknown }).data;
+  }
+
   return data;
 }
