@@ -1,7 +1,11 @@
 import { auth } from '@/lib/auth';
 
-// 🛠️ CHANGED: Explicitly use 127.0.0.1 instead of localhost
-const BASE_URL = 'http://127.0.0.1:3001';
+const BASE_URL =
+  process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
+
+if (!BASE_URL) {
+  throw new Error('Backend API URL is not configured');
+}
 
 export async function privateFetch(
   endpoint: string,
@@ -9,27 +13,45 @@ export async function privateFetch(
 ) {
   const session = await auth();
 
-  // 1. Check if the session and backendToken exist
   if (!session?.backendToken) {
     throw new Error('No authentication token found');
   }
 
-  // 2. Merge headers with the Authorization Bearer token
-  const headers = {
+  const headers: HeadersInit = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${session.backendToken}`,
-    ...options.headers,
+    ...(options.headers || {}),
   };
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,
     headers,
+    cache: 'no-store',
   });
 
-  // 3. Handle 401 Unauthorized (Token expired)
+  let data: unknown = null;
+
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
   if (response.status === 401) {
     throw new Error('Session expired. Please sign in again.');
   }
 
-  return response.json();
+  if (!response.ok) {
+    const message =
+      typeof data === 'object' &&
+      data !== null &&
+      'message' in data &&
+      typeof (data as { message: unknown }).message === 'string'
+        ? (data as { message: string }).message
+        : 'Request failed';
+
+    throw new Error(message);
+  }
+
+  return data;
 }

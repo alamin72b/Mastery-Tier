@@ -4,6 +4,91 @@ import { SignIn, SignOut } from '@/components/AuthButtons';
 import Dashboard from '@/components/Dashboard';
 import FriendsPanel from '@/components/FriendsPanel';
 
+type Category = {
+  id: number;
+  name: string;
+  userId: string;
+  masteryTier: number;
+  children: Array<{
+    id: number;
+    name: string;
+    count: number;
+    categoryId: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type FriendCategory = {
+  id: number;
+  name: string;
+  userId: string;
+  masteryTier: number;
+  children: Array<{
+    id: number;
+    name: string;
+    count: number;
+    categoryId: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type Friend = {
+  id: string;
+  email: string;
+  name?: string | null;
+  avatar?: string | null;
+  friendedAt: string;
+  categories: FriendCategory[];
+};
+
+type FriendRequestUser = {
+  id: string;
+  email: string;
+  name?: string | null;
+  avatar?: string | null;
+};
+
+type IncomingRequest = {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  sender: FriendRequestUser;
+};
+
+type OutgoingRequest = {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  receiver: FriendRequestUser;
+};
+
+type RequestsResponse = {
+  incoming: IncomingRequest[];
+  outgoing: OutgoingRequest[];
+};
+
+type DiscoverUser = {
+  id: string;
+  email: string;
+  name?: string | null;
+  avatar?: string | null;
+  isFriend: boolean;
+  hasOutgoingRequest: boolean;
+  hasIncomingRequest: boolean;
+};
+
 export default async function Home({
   searchParams,
 }: {
@@ -35,11 +120,11 @@ export default async function Home({
     );
   }
 
-  let categories = [];
-  let friends = [];
-  let incomingRequests = [];
-  let outgoingRequests = [];
-  let discoverResults = [];
+  let categories: Category[] = [];
+  let friends: Friend[] = [];
+  let incomingRequests: IncomingRequest[] = [];
+  let outgoingRequests: OutgoingRequest[] = [];
+  let discoverResults: DiscoverUser[] = [];
 
   try {
     const [
@@ -47,7 +132,7 @@ export default async function Home({
       friendsResponse,
       requestsResponse,
       discoverResponse,
-    ] = await Promise.all([
+    ] = (await Promise.all([
       privateFetch('/categories'),
       privateFetch('/friends'),
       privateFetch('/friends/requests'),
@@ -55,14 +140,14 @@ export default async function Home({
         ? privateFetch(
             `/friends/discover?email=${encodeURIComponent(emailQuery)}`,
           )
-        : Promise.resolve({ data: [] }),
-    ]);
+        : Promise.resolve([] as DiscoverUser[]),
+    ])) as [Category[], Friend[], RequestsResponse, DiscoverUser[]];
 
-    categories = categoriesResponse.data || [];
-    friends = friendsResponse.data || [];
-    incomingRequests = requestsResponse.data?.incoming || [];
-    outgoingRequests = requestsResponse.data?.outgoing || [];
-    discoverResults = discoverResponse.data || [];
+    categories = categoriesResponse;
+    friends = friendsResponse;
+    incomingRequests = requestsResponse.incoming || [];
+    outgoingRequests = requestsResponse.outgoing || [];
+    discoverResults = discoverResponse;
   } catch (error) {
     console.error('Fetch error:', error);
   }
