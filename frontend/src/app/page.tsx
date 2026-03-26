@@ -2,9 +2,16 @@ import { auth } from '@/lib/auth';
 import { privateFetch } from '@/lib/api';
 import { SignIn, SignOut } from '@/components/AuthButtons';
 import Dashboard from '@/components/Dashboard';
+import FriendsPanel from '@/components/FriendsPanel';
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams?: Promise<{ email?: string }>;
+}) {
   const session = await auth();
+  const resolvedSearchParams = await searchParams;
+  const emailQuery = resolvedSearchParams?.email?.trim() || '';
 
   if (!session || !session.backendToken) {
     return (
@@ -29,16 +36,40 @@ export default async function Home() {
   }
 
   let categories = [];
+  let friends = [];
+  let incomingRequests = [];
+  let outgoingRequests = [];
+  let discoverResults = [];
+
   try {
-    const response = await privateFetch('/categories');
-    categories = response.data || [];
+    const [
+      categoriesResponse,
+      friendsResponse,
+      requestsResponse,
+      discoverResponse,
+    ] = await Promise.all([
+      privateFetch('/categories'),
+      privateFetch('/friends'),
+      privateFetch('/friends/requests'),
+      emailQuery
+        ? privateFetch(
+            `/friends/discover?email=${encodeURIComponent(emailQuery)}`,
+          )
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    categories = categoriesResponse.data || [];
+    friends = friendsResponse.data || [];
+    incomingRequests = requestsResponse.data?.incoming || [];
+    outgoingRequests = requestsResponse.data?.outgoing || [];
+    discoverResults = discoverResponse.data || [];
   } catch (error) {
     console.error('Fetch error:', error);
   }
 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8">
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-6xl">
         <header className="mb-6 rounded-[28px] border border-zinc-200 bg-white px-6 py-5 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -59,7 +90,16 @@ export default async function Home() {
           </div>
         </header>
 
-        <Dashboard categories={categories} />
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <Dashboard categories={categories} />
+          <FriendsPanel
+            friends={friends}
+            incomingRequests={incomingRequests}
+            outgoingRequests={outgoingRequests}
+            discoverResults={discoverResults}
+            initialEmail={emailQuery}
+          />
+        </div>
       </div>
     </main>
   );
