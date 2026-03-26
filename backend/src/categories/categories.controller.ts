@@ -1,82 +1,86 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Param,
-  Patch,
-  ParseIntPipe,
-  UseGuards,
-  Req,
+  Controller,
   Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Request } from 'express'; // 👈 1. Import Request from Express
+import { Request } from 'express';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 
-// 👈 2. Define exactly what your JWT Strategy attaches to the request
 interface RequestWithUser extends Request {
   user: {
-    userId: string; // (Change this to number if your user IDs are integers)
-    // You can add email, role, etc. here if your JWT payload includes them
+    userId: string;
+    email: string;
   };
 }
 
 @Controller('categories')
-@UseGuards(AuthGuard('jwt')) // 🔒 Locks down EVERY route in this controller
+@UseGuards(AuthGuard('jwt'))
 export class CategoriesController {
-  // We inject the service (the brain) into the controller (the door)
   constructor(private readonly categoriesService: CategoriesService) {}
 
-  // GET http://localhost:3001/categories
   @Get()
   async getAll(@Req() req: RequestWithUser) {
-    // 👈 3. Replace 'any' with our new interface
-    // TypeScript now fully understands that req.user.userId is a safe string!
     return this.categoriesService.getAllCategories(req.user.userId);
   }
 
-  // POST http://localhost:3001/categories
   @Post()
   async create(
     @Body() createCategoryDto: CreateCategoryDto,
-    @Req() req: RequestWithUser, // 👈 4. Replace 'any' here as well
+    @Req() req: RequestWithUser,
   ) {
-    // req.user is automatically populated by your JwtStrategy!
     return this.categoriesService.createCategory(
       createCategoryDto.name,
       req.user.userId,
     );
   }
-  // DELETE http://localhost:3001/categories/sub/:id
+
   @Delete('sub/:id')
-  async deleteSub(@Param('id', ParseIntPipe) id: number) {
-    return this.categoriesService.deleteSubCategory(id);
+  async deleteSub(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.categoriesService.deleteSubCategory(id, req.user.userId);
   }
-  // POST http://localhost:3001/categories/:id/sub
+
   @Post(':id/sub')
   async createSub(
     @Param('id', ParseIntPipe) id: number,
     @Body('name') name: string,
+    @Req() req: RequestWithUser,
   ) {
-    return this.categoriesService.createSubCategory(name, id);
+    return this.categoriesService.createSubCategory(name, id, req.user.userId);
   }
 
-  // PATCH http://localhost:3001/categories/sub/:id/increment
   @Patch('sub/:id/increment')
-  async increment(@Param('id', ParseIntPipe) id: number) {
-    return this.categoriesService.incrementSubCategory(id);
-  }
-  // DELETE http://localhost:3001/categories/:id
-  @Delete(':id')
-  async deleteCategory(@Param('id', ParseIntPipe) id: number) {
-    return this.categoriesService.deleteCategory(id);
+  async increment(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.categoriesService.incrementSubCategory(id, req.user.userId);
   }
 
-  // PATCH http://localhost:3001/categories/sub/:id/decrement
+  @Delete(':id')
+  async deleteCategory(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.categoriesService.deleteCategory(id, req.user.userId);
+  }
+
   @Patch('sub/:id/decrement')
-  async decrement(@Param('id', ParseIntPipe) id: number) {
-    return this.categoriesService.decrementSubCategory(id);
+  async decrement(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.categoriesService.decrementSubCategory(id, req.user.userId);
   }
 }

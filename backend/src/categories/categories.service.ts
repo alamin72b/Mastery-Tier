@@ -1,51 +1,44 @@
 import {
+  ForbiddenException,
   Injectable,
-  NotFoundException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class CategoriesService {
-  // Inject the clean, global database connection
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Retrieves all categories belonging to a specific user
-   * and calculates the masteryTier dynamically.
-   */
   async getAllCategories(userId: string) {
     try {
       const categories = await this.prisma.category.findMany({
-        // Filter by the logged-in user's ID
         where: { userId },
-        include: { children: true },
+        include: {
+          children: {
+            orderBy: { name: 'asc' },
+          },
+        },
+        orderBy: { name: 'asc' },
       });
 
-      return categories.map((category) => {
-        const masteryTier =
+      return categories.map((category) => ({
+        ...category,
+        masteryTier:
           category.children.length > 0
             ? Math.min(...category.children.map((sub) => sub.count))
-            : 0;
-
-        return { ...category, masteryTier };
-      });
+            : 0,
+      }));
     } catch (error) {
       console.error('Error fetching categories:', error);
       throw new InternalServerErrorException('Failed to retrieve categories');
     }
   }
 
-  /**
-   * Creates a new category linked to a specific user.
-   */
   async createCategory(name: string, userId: string) {
     try {
       return await this.prisma.category.create({
-        data: {
-          name,
-          userId, // Links the category to the User model in Neon
-        },
+        data: { name, userId },
       });
     } catch (error) {
       console.error('Error creating category:', error);
@@ -53,39 +46,70 @@ export class CategoriesService {
     }
   }
 
-  async createSubCategory(name: string, categoryId: number) {
+  async createSubCategory(name: string, categoryId: number, userId: string) {
     try {
       const category = await this.prisma.category.findUnique({
         where: { id: categoryId },
+        select: { id: true, userId: true },
       });
 
       if (!category) {
         throw new NotFoundException(`Category with ID ${categoryId} not found`);
       }
 
+      if (category.userId !== userId) {
+        throw new ForbiddenException('You can only edit your own categories');
+      }
+
       return await this.prisma.subCategory.create({
         data: { name, categoryId },
       });
     } catch (error) {
-      if (error instanceof NotFoundException) throw error;
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
       throw new InternalServerErrorException('Failed to create sub-category');
     }
   }
-  async deleteSubCategory(subCategoryId: number) {
+
+  async deleteSubCategory(subCategoryId: number, userId: string) {
     try {
-      // Prisma's delete method will automatically throw an error if the ID doesn't exist
+      const subCategory = await this.prisma.subCategory.findUnique({
+        where: { id: subCategoryId },
+        include: { category: { select: { userId: true } } },
+      });
+
+      if (!subCategory) {
+        throw new NotFoundException('Sub-category not found');
+      }
+
+      if (subCategory.category.userId !== userId) {
+        throw new ForbiddenException('You can only delete your own topics');
+      }
+
       return await this.prisma.subCategory.delete({
         where: { id: subCategoryId },
       });
     } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
       console.error('Error deleting sub-category:', error);
       throw new InternalServerErrorException('Failed to delete sub-category');
     }
   }
-  async incrementSubCategory(subCategoryId: number) {
+
+  async incrementSubCategory(subCategoryId: number, userId: string) {
     try {
       const subCategory = await this.prisma.subCategory.findUnique({
         where: { id: subCategoryId },
+        include: { category: { select: { userId: true } } },
       });
 
       if (!subCategory) {
@@ -94,50 +118,90 @@ export class CategoriesService {
         );
       }
 
+      if (subCategory.category.userId !== userId) {
+        throw new ForbiddenException('You can only edit your own topics');
+      }
+
       return await this.prisma.subCategory.update({
         where: { id: subCategoryId },
         data: { count: { increment: 1 } },
       });
     } catch (error) {
-      if (error instanceof NotFoundException) throw error;
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
       throw new InternalServerErrorException(
         'Failed to increment sub-category',
       );
     }
   }
 
-  async decrementSubCategory(subCategoryId: number) {
+  async decrementSubCategory(subCategoryId: number, userId: string) {
     try {
       const subCategory = await this.prisma.subCategory.findUnique({
         where: { id: subCategoryId },
+        include: { category: { select: { userId: true } } },
       });
 
-      if (!subCategory) throw new NotFoundException('Sub-category not found');
-      // Don't let the count go below 0
-      if (subCategory.count <= 0) return subCategory;
+      if (!subCategory) {
+        throw new NotFoundException('Sub-category not found');
+      }
+
+      if (subCategory.category.userId !== userId) {
+        throw new ForbiddenException('You can only edit your own topics');
+      }
+
+      if (subCategory.count <= 0) {
+        return subCategory;
+      }
 
       return await this.prisma.subCategory.update({
         where: { id: subCategoryId },
         data: { count: { decrement: 1 } },
       });
     } catch (error) {
-      if (error instanceof NotFoundException) throw error;
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
       throw new InternalServerErrorException('Failed to decrement');
     }
   }
 
-  async deleteCategory(categoryId: number) {
+  async deleteCategory(categoryId: number, userId: string) {
     try {
-      // 1. Delete all child sub-categories first to avoid foreign key errors
+      const category = await this.prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { userId: true },
+      });
+
+      if (!category) {
+        throw new NotFoundException('Category not found');
+      }
+
+      if (category.userId !== userId) {
+        throw new ForbiddenException('You can only delete your own categories');
+      }
+
       await this.prisma.subCategory.deleteMany({
         where: { categoryId },
       });
 
-      // 2. Delete the main category
       return await this.prisma.category.delete({
         where: { id: categoryId },
       });
     } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
       console.error('Error deleting category:', error);
       throw new InternalServerErrorException('Failed to delete category');
     }

@@ -1,33 +1,43 @@
 generator client {
-  provider = "prisma-client-js" 
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
 
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELED
 }
 
 model User {
-  id         String     @id @default(uuid())
-  email      String     @unique
-  googleId   String?    @unique
-  name       String?
-  avatar     String?
-  categories Category[] // A user can have many categories
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id                     String          @id @default(uuid())
+  email                  String          @unique
+  googleId               String?         @unique
+  name                   String?
+  avatar                 String?
+  categories             Category[]
+  sentFriendRequests     FriendRequest[] @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
+  friendshipsInitiated   Friend[]        @relation("FriendUser")
+  friendshipsReceived    Friend[]        @relation("FriendFriend")
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
 }
 
 model Category {
-  id         Int           @id @default(autoincrement())
-  name       String
-  userId     String        // Foreign key to User
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  children   SubCategory[]
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id        Int           @id @default(autoincrement())
+  name      String
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  children  SubCategory[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
-  @@unique([name, userId]) // Optional: Ensures a user can't have two categories with the exact same name
+  @@unique([name, userId])
 }
 
 model SubCategory {
@@ -38,4 +48,32 @@ model SubCategory {
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model FriendRequest {
+  id         String              @id @default(uuid())
+  senderId   String
+  receiverId String
+  status     FriendRequestStatus @default(PENDING)
+  sender     User                @relation("FriendRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User                @relation("FriendRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status])
+  @@index([senderId, status])
+}
+
+model Friend {
+  id        String   @id @default(uuid())
+  userId    String
+  friendId  String
+  user      User     @relation("FriendUser", fields: [userId], references: [id], onDelete: Cascade)
+  friend    User     @relation("FriendFriend", fields: [friendId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
 }

@@ -11,14 +11,14 @@ export async function createCategoryAction(formData: FormData) {
     method: 'POST',
     body: JSON.stringify({ name }),
   });
-  revalidatePath('/'); // Refreshes the page to show the new data
+  revalidatePath('/');
 }
 
 export async function deleteSubCategoryAction(subId: number) {
   await privateFetch(`/categories/sub/${subId}`, {
     method: 'DELETE',
   });
-  revalidatePath('/'); // Instantly updates the UI after deletion
+  revalidatePath('/');
 }
 
 export async function createSubCategoryAction(
@@ -49,5 +49,27 @@ export async function incrementAction(subId: number) {
 
 export async function decrementAction(subId: number) {
   await privateFetch(`/categories/sub/${subId}/decrement`, { method: 'PATCH' });
+  revalidatePath('/');
+}
+
+export async function sendFriendRequestAction(formData: FormData) {
+  const email = formData.get('email') as string;
+  if (!email) return;
+
+  await privateFetch('/friends/requests', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  revalidatePath('/');
+}
+
+export async function respondToFriendRequestAction(
+  requestId: string,
+  action: 'accept' | 'decline',
+) {
+  await privateFetch(`/friends/requests/${requestId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ action }),
+  });
   revalidatePath('/');
 }

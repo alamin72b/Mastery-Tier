@@ -12,12 +12,10 @@ import {
 export default function Dashboard({ categories = [] }: { categories: any[] }) {
   return (
     <div className="space-y-6">
-      {/* CREATE NEW CATEGORY FORM */}
       <form
         action={createCategoryAction}
         className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
       >
-        {/* CSS GRID: Forces full width on mobile, side-by-side on desktop */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
           <input
             type="text"
@@ -35,24 +33,23 @@ export default function Dashboard({ categories = [] }: { categories: any[] }) {
         </div>
       </form>
 
-      {/* EMPTY STATE */}
       {categories.length === 0 && (
         <div className="rounded-2xl border border-dashed border-zinc-200 bg-white px-6 py-14 text-center">
-          <h3 className="text-base font-semibold text-zinc-900">No subjects yet</h3>
+          <h3 className="text-base font-semibold text-zinc-900">
+            No subjects yet
+          </h3>
           <p className="mt-2 text-sm text-zinc-500">
             Add your first subject to start tracking your study progress.
           </p>
         </div>
       )}
 
-      {/* CATEGORIES LIST */}
       <div className="space-y-5">
         {categories.map((category) => (
           <section
             key={category.id}
             className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
           >
-            {/* HEADER */}
             <div className="flex flex-col gap-4 border-b border-zinc-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -64,7 +61,7 @@ export default function Dashboard({ categories = [] }: { categories: any[] }) {
                     onClick={() => {
                       if (
                         window.confirm(
-                          `Are you sure you want to delete "${category.name}" and all of its topics?`
+                          `Are you sure you want to delete "${category.name}" and all of its topics?`,
                         )
                       ) {
                         deleteCategoryAction(category.id);
@@ -89,7 +86,6 @@ export default function Dashboard({ categories = [] }: { categories: any[] }) {
               </div>
             </div>
 
-            {/* SUBCATEGORIES LIST */}
             <div className="mt-4 space-y-2">
               {category.children?.map((sub: any) => (
                 <div
@@ -102,7 +98,6 @@ export default function Dashboard({ categories = [] }: { categories: any[] }) {
                     </span>
                   </div>
 
-                  {/* Buttons group: shrink-0 keeps them from squishing */}
                   <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
                     <button
                       onClick={() => decrementAction(sub.id)}
@@ -127,7 +122,9 @@ export default function Dashboard({ categories = [] }: { categories: any[] }) {
                     <button
                       onClick={() => {
                         if (
-                          window.confirm('Are you sure you want to delete this topic?')
+                          window.confirm(
+                            'Are you sure you want to delete this topic?',
+                          )
                         ) {
                           deleteSubCategoryAction(sub.id);
                         }
@@ -142,12 +139,10 @@ export default function Dashboard({ categories = [] }: { categories: any[] }) {
               ))}
             </div>
 
-            {/* CREATE SUBCATEGORY FORM */}
             <form
               action={createSubCategoryAction.bind(null, category.id)}
               className="mt-5 border-t border-zinc-100 pt-4"
             >
-              {/* CSS GRID: Forces full width on mobile, side-by-side on desktop */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
                 <input
                   type="text"
