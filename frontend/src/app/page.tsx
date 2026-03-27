@@ -451,6 +451,7 @@ export default async function Home({
               outgoingRequests={outgoingRequests}
               discoverResults={discoverResults}
               initialEmail={emailQuery}
+              backendToken={session.backendToken}
             />
           </aside>
         </div>
