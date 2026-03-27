@@ -5,6 +5,7 @@ import { SubCategoriesModule } from './sub-categories/sub-categories.module';
 import { FriendsModule } from './friends/friends.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { OutboxModule } from './outbox/outbox.module';
+import { RealtimeModule } from './realtime/realtime.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { OutboxModule } from './outbox/outbox.module';
     SubCategoriesModule,
     FriendsModule,
     OutboxModule,
+    RealtimeModule,
   ],
 })
 export class AppModule {}
